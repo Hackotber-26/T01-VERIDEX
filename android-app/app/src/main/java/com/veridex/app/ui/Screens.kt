@@ -18,13 +18,16 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import com.veridex.app.R
 import com.veridex.app.AppModel
 import com.veridex.app.BuildConfig
 import com.veridex.app.data.*
@@ -36,17 +39,33 @@ import java.net.URI
 @Composable fun HomeScreen(cases: List<RoadCase>, draft: CaptureDraft?, capture: () -> Unit, resume: () -> Unit, discard: () -> Unit, open: (String) -> Unit, all: () -> Unit, demo: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(38.dp).background(Mint, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Verified, null, tint = Ink, modifier = Modifier.size(23.dp)) }
-                Spacer(Modifier.width(10.dp)); Text("VERIDEX", fontWeight = FontWeight.ExtraBold, letterSpacing = 3.sp, fontSize = 17.sp)
-                Spacer(Modifier.weight(1f)); Pill("FIELD NOTES", Muted)
-            }
-        }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                Eyebrow("Better roads. Clearer evidence.")
-                Title("A photo starts it.\nProof completes it.", 36)
-                Body("Capture the problem. Follow the repair.\nMake every resolution reviewable.")
+            Box(Modifier.fillMaxWidth().height(330.dp).clip(RoundedCornerShape(30.dp))) {
+                Image(
+                    painter = painterResource(R.drawable.vidhana_soudha),
+                    contentDescription = "Vidhana Soudha in Bengaluru",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(
+                            listOf(Ink.copy(alpha = .36f), Ink.copy(alpha = .66f), Ink.copy(alpha = .94f))
+                        )
+                    )
+                )
+                Column(Modifier.fillMaxSize().padding(22.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(38.dp).background(Mint, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Verified, null, tint = Ink, modifier = Modifier.size(23.dp)) }
+                        Spacer(Modifier.width(10.dp)); Text("VERIDEX", fontWeight = FontWeight.ExtraBold, letterSpacing = 3.sp, fontSize = 17.sp, color = Paper)
+                        Spacer(Modifier.weight(1f)); Pill("BENGALURU", Mint)
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Eyebrow("Better roads. Clearer evidence.", Mint)
+                        Title("A photo starts it.\nProof completes it.", 34)
+                        Body("Capture the problem. Follow the repair.\nMake every resolution reviewable.", Paper.copy(alpha = .88f))
+                    }
+                    Text("VIDHANA SOUDHA  ·  PHOTO: AUGUSTUS BINU  ·  CC BY-SA 3.0", color = Paper.copy(alpha = .78f), fontSize = 8.sp, letterSpacing = 1.sp)
+                }
             }
         }
         item {
