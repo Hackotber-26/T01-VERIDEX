@@ -15,3 +15,14 @@ dataset/public/*/part-*
 !.env.example
 .DS_Store
 *.log
+# Android Studio / Gradle
+.gradle/
+.kotlin/
+.idea/
+local.properties
+**/build/
+*.iml
+
+# Local mobile API state and Python environments
+android-app/backend/data/
+android-app/backend/.venv/

@@ -77,3 +77,8 @@ Pixel-identical decoded/oriented/resized before and after images are rejected be
 - Citizen/official app and government routing are planned, not implemented here. The unrelated shopping demo is not part of VERIDEX.
 
 API credentials, virtual environments, bulk public dataset files and local inference runs are excluded. Public dataset metadata and attribution are retained. Synthetic examples are labelled as synthetic. No structural repair certification, government integration or real-world accuracy is claimed. See `training/artifacts/crop-baseline-v1/RESULTS.md` and `evaluation/PLAN.md`.
+## Android application
+
+The native Android client and its local development API are in [`android-app/`](android-app/). It supports pothole photo capture/import, evidence review, case history and local storage. Current location is requested automatically during photo review after Android permission is granted, with cached, network and GPS provider fallback. The app can run without a live AI connection; configure a backend/model adapter separately for inference.
+
+Open `android-app/` in Android Studio or build a debug APK from that directory with `gradlew assembleDebug`. See [`android-app/README.md`](android-app/README.md) for setup and [`android-app/VERIFICATION.md`](android-app/VERIFICATION.md) for tested behavior and device follow-ups. Local SDK paths, build outputs, virtual environments and backend case uploads are excluded from version control.
