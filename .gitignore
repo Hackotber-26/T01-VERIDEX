@@ -15,3 +15,5 @@ dataset/public/*/part-*
 !.env.example
 .DS_Store
 *.log
+
+.local/
