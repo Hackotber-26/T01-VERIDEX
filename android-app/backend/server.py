@@ -30,7 +30,9 @@ def load_local_env():
         name, value = line.split("=", 1)
         name, value = name.strip(), value.strip()
         if name and value and name.replace("_", "").isalnum():
-            os.environ.setdefault(name, value.strip("\"'"))
+            # A defined-but-empty shell variable should not mask the local .env.
+            if not os.environ.get(name):
+                os.environ[name] = value.strip("\"'")
 
 
 load_local_env()
