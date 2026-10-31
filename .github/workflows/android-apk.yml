@@ -1,0 +1,50 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [daksha-app]
+    paths-ignore:
+      - deliverables/VERIDEX-v2.2.1-debug.apk
+
+permissions:
+  contents: write
+
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out daksha-app
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK components
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Build debug APK
+        working-directory: android-app
+        run: chmod +x gradlew && ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Publish APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: VERIDEX-v2.2.1-debug
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Add APK to daksha-app branch
+        run: |
+          mkdir -p deliverables
+          cp android-app/app/build/outputs/apk/debug/app-debug.apk deliverables/VERIDEX-v2.2.1-debug.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add deliverables/VERIDEX-v2.2.1-debug.apk
+          git commit -m "Add VERIDEX 2.2.1 debug APK [skip ci]"
+          git push
