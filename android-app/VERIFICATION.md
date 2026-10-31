@@ -24,8 +24,15 @@
 
 - Physical phone cameras, outdoor location acquisition, denied-permission recovery, photo picker across device vendors, and all Android versions.
 - Airplane-mode/OS-killed background retry behaviour on physical phones (queue/retry code is present).
-- The actual VERIDEX model/provider integration and real-photo accuracy. The model source/endpoint was not present in the supplied workspace.
+- Version 2.1 was built, but the actual provider request has not been made with a real before/after pair. Live key validity, provider quota/model availability and real-photo accuracy remain unverified.
 - Production authentication, reviewer accounts, deployment and Play Store release. The included backend is development-only.
+
+## Version 2.1 integration
+
+- The real app now requires explicit consent for the current photo revision before upload or AI review. Adding evidence invalidates consent; withdrawing consent cancels queued upload work and requests deletion of the backend case.
+- The local backend loads its ignored `backend/.env`, checks app registration and model-key presence, then calls the repository's `veridex.review` pipeline. The API key is not embedded in Android source or the APK.
+- The Connection screen's health check reports configuration only; it does not send images to the provider. The live provider call and findings still require a user-consented photo pair.
+- No human-label approval or model-training workflow is part of this client scope.
 
 ## v0.2 checks not yet performed
 

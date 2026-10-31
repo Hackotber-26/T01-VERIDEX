@@ -10,7 +10,7 @@
 
 ## What to say
 
-“Today we’re showing the evidence workflow and the kinds of responses the product can present. The three photos are real, public reference photos. The response is scripted, the images are not paired, and no AI inference is running. Once the API adapter is configured, the same result format will be populated by our model.”
+“Today we’re showing the evidence workflow and the kinds of responses the product can present. The three photos are real, public reference photos. The response is scripted, the images are not paired, and no AI inference is running. In the real case flow, the model runs through our local backend after the user consents to upload.”
 
 ## Demo scenarios
 

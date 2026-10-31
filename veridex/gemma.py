@@ -42,7 +42,7 @@ class ProviderError(Exception):
     pass
 
 def infer(images, roi, prompt=None):
-    key = os.environ.get('GEMINI_API_KEY')
+    key = os.environ.get('MODEL_API_KEY') or os.environ.get('GEMINI_API_KEY')
     if not key:
         raise ProviderError('GEMINI_API_KEY is not configured')
     model = os.environ.get('VERIDEX_MODEL', 'gemma-4-26b-a4b-it')

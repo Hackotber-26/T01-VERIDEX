@@ -28,6 +28,9 @@ import androidx.compose.ui.unit.*
 import com.veridex.app.AppModel
 import com.veridex.app.BuildConfig
 import com.veridex.app.data.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.URI
 
 @Composable fun HomeScreen(cases: List<RoadCase>, draft: CaptureDraft?, capture: () -> Unit, resume: () -> Unit, discard: () -> Unit, open: (String) -> Unit, all: () -> Unit, demo: () -> Unit) {
@@ -127,7 +130,7 @@ import java.net.URI
     }
 }
 
-@Composable fun DetailScreen(case: RoadCase, busy: Boolean, back: () -> Unit, capture: () -> Unit, upload: () -> Unit, review: () -> Unit, rename: (String) -> Unit, archive: () -> Unit, delete: () -> Unit, remind: (Int) -> Unit) {
+@Composable fun DetailScreen(case: RoadCase, busy: Boolean, back: () -> Unit, capture: () -> Unit, upload: () -> Unit, review: () -> Unit, consent: (Boolean) -> Unit, rename: (String) -> Unit, archive: () -> Unit, delete: () -> Unit, remind: (Int) -> Unit) {
     val context = LocalContext.current
     var renameDialog by remember { mutableStateOf(false) }; var deleteDialog by remember { mutableStateOf(false) }; var reminderMenu by remember { mutableStateOf(false) }; var title by remember(case.title) { mutableStateOf(case.title) }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -155,10 +158,24 @@ import java.net.URI
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Icon(if (case.sync == "uploaded") Icons.Outlined.CloudDone else Icons.Outlined.CloudUpload, null, tint = Mint); Text(when (case.sync) { "uploaded" -> "Evidence uploaded"; "queued" -> "Upload queued"; "uploading" -> "Uploading evidence…"; "failed" -> "Upload needs attention"; else -> "Saved on this phone" }, fontWeight = FontWeight.Medium) }
             Body(when (case.sync) { "queued" -> "Uploads resume when connected. You can leave this screen."; "uploaded" -> "This version of your evidence is saved on the backend."; else -> "Your photos are retained locally, even if the connection drops." })
             if (case.error.isNotBlank()) Text(case.error, color = Amber, fontSize = 12.sp)
-            if (case.sync !in listOf("queued", "uploading", "uploaded")) OutlinedButton(upload, Modifier.fillMaxWidth()) { Text(if (case.sync == "failed") "Retry upload" else "Upload evidence") }
+            if (case.photos.size > 1) {
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Checkbox(checked = case.hasReviewConsent, onCheckedChange = consent, enabled = !busy)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("Consent to AI review", fontWeight = FontWeight.SemiBold)
+                        Body("Send these photos, marked areas, notes and location to the configured model through this local backend. The case is stored there for review. This app does not route photos to human labeling or model training.")
+                        if (case.hasReviewConsent) Text("Consent applies to revision ${case.revision}; new photos require consent again.", fontSize = 11.sp, color = Mint)
+                    }
+                }
+            } else Body("Add a repair photo before giving consent and sending evidence for AI review.")
+            if (case.sync !in listOf("queued", "uploading") && case.photos.size > 1 && (case.sync != "uploaded" || !case.hasReviewConsent)) {
+                OutlinedButton(upload, Modifier.fillMaxWidth(), enabled = !busy && case.hasReviewConsent) {
+                    Text(if (case.sync == "failed") "Retry consented upload" else if (case.sync == "uploaded") "Upload latest evidence" else "Upload for AI review")
+                }
+            }
         }
         Action(if (case.finding?.outcome == "insufficient_evidence") "Take requested photo" else if (case.photos.size > 1) "Add another repair photo" else "Capture repair photo", Icons.Outlined.PhotoCamera, enabled = !busy && case.photos.size < 12, onClick = capture)
-        if (case.photos.size > 1) OutlinedButton(review, Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = !busy && case.sync == "uploaded", shape = RoundedCornerShape(18.dp)) { if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(18.dp)); Spacer(Modifier.width(10.dp)); Text(if (busy) "Reviewing evidence…" else "Request AI review") }
+        if (case.photos.size > 1) OutlinedButton(review, Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = !busy && case.sync == "uploaded" && case.hasReviewConsent, shape = RoundedCornerShape(18.dp)) { if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(18.dp)); Spacer(Modifier.width(10.dp)); Text(if (busy) "Reviewing evidence…" else "Request AI review") }
         Eyebrow("EVIDENCE HISTORY")
         case.photos.forEachIndexed { index, photo ->
             Sheet { Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) { Photo(photo.path, Modifier.size(54.dp)); Column(Modifier.weight(1f)) { Text("${index + 1}. ${photo.role.replaceFirstChar { it.uppercase() }} • ${photo.source}", fontSize = 14.sp); Text(date(photo.time), fontSize = 11.sp, color = Muted); Text("Brightness ${photo.quality.brightness}% • Sharpness ${photo.quality.sharpness}%", fontSize = 10.sp, color = Muted); if (photo.sha256.isNotBlank()) Text("SHA-256 ${photo.sha256.take(14)}…", fontSize = 9.sp, color = Muted) } } }
@@ -258,10 +275,13 @@ private data class DemoSample(
 @Composable fun ConnectionScreen(model: AppModel, language: String, setLanguage: (String) -> Unit, replayOnboarding: () -> Unit) {
     var url by rememberSaveable { mutableStateOf(model.store.baseUrl) }
     var validation by remember { mutableStateOf("") }
+    var backendStatus by remember { mutableStateOf("") }
+    var checkingBackend by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(24.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
-        Eyebrow("READY WHEN YOUR MODEL IS")
-        Title("Connect the dots.")
-        Body("Capture now. Connect your VERIDEX backend when it’s ready.")
+        Eyebrow("CLIENT REVIEW · LOCAL BACKEND")
+        Title("Connect your model.")
+        Body("The real app sends consented evidence to your local backend. Its model key stays on the server and is never included in this APK. The offline demo remains separate.")
         Sheet {
             Eyebrow(tr("language"), Mint)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("en" to "English", "kn" to "ಕನ್ನಡ", "hi" to "हिन्दी").forEach { (code, label) -> FilterChip(language == code, { setLanguage(code) }, label = { Text(label) }) } }
@@ -281,15 +301,38 @@ private data class DemoSample(
                     validation = "Use an HTTPS URL, or a localhost/emulator HTTP address in this debug build."
                 } else { model.configure(clean) }
             }
+            OutlinedButton(onClick = {
+                val clean = url.trim().trimEnd('/')
+                scope.launch {
+                    checkingBackend = true
+                    backendStatus = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val health = Backend(clean).health()
+                            if (health.optBoolean("ai_connected")) "Backend ready · ${health.optString("app")} · ${health.optString("model")} configured"
+                            else "Backend reached; app registration or model key is missing."
+                        }.getOrElse { "Could not reach this backend: ${it.message ?: "check the address"}" }
+                    }
+                    checkingBackend = false
+                }
+            }, modifier = Modifier.fillMaxWidth(), enabled = !checkingBackend) {
+                if (checkingBackend) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Outlined.CloudDone, null)
+                Spacer(Modifier.width(8.dp)); Text(if (checkingBackend) "Checking…" else "Test backend and model")
+            }
+            if (backendStatus.isNotBlank()) Body(backendStatus, if (backendStatus.startsWith("Connected")) Mint else Amber)
         }
         Sheet {
-            Eyebrow("WHAT WORKS OFFLINE", Mint)
-            Body("Camera capture, photo import, area marking, case history and the scripted demo. Uploads need a configured backend and a connection.")
+            Eyebrow("REAL APP REVIEW FLOW", Mint)
+            Body("Save an original and repair photo → review and grant consent → upload → request model review. Adding a new photo clears consent for the older revision.")
+            Body("Withdrawing consent cancels queued upload and asks the local backend to delete that case.", Muted)
+        }
+        Sheet {
+            Eyebrow("OFFLINE SHOWCASE", Lilac)
+            Body("The separate photo demo runs without this backend. Its outcomes are scripted and never used as AI results.")
         }
         if (BuildConfig.DEBUG) Sheet {
             Eyebrow("DEVELOPER SETUP", Lilac)
             Body("For the included local backend on an Android emulator, use http://10.0.2.2:8080. On a USB device, use adb reverse tcp:8080 tcp:8080 and http://127.0.0.1:8080.")
         }
-        Body("VERIDEX · Prototype 0.2\nPhotos stay in private app storage. Uninstalling removes local cases. Live AI and reviewer accounts require a backend integration.")
+        Body("VERIDEX · Version 2.1\nPhotos stay in private app storage until you consent to upload. Uninstalling removes local cases. AI findings still require human review; this version does not provide a human-label approval workflow.")
     }
 }

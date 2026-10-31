@@ -18,7 +18,7 @@ class UploadContractTest(unittest.TestCase):
         image = io.BytesIO()
         Image.new("RGB", (48, 48), "gray").save(image, format="JPEG")
         self.photo = {"role": "before", "region": [.2, .2, .8, .8], "time": 1, "image_base64": base64.b64encode(image.getvalue()).decode()}
-        self.case = {"id": "12345678-1234-1234-1234-123456789abc", "location": "Test road", "revision": 1, "photos": [self.photo]}
+        self.case = {"id": "12345678-1234-1234-1234-123456789abc", "location": "Test road", "revision": 1, "review_consent": True, "review_consent_revision": 1, "review_consent_at": 1770000000000, "photos": [self.photo]}
 
     def tearDown(self):
         self.temp.cleanup()
@@ -53,7 +53,7 @@ class UploadContractTest(unittest.TestCase):
     def test_no_ai_does_not_produce_a_finding(self):
         self.case["photos"].append({**self.photo, "role": "after"})
         self.upload()
-        with patch.dict(os.environ, {"MODEL_REVIEW_URL": ""}):
+        with patch.dict(os.environ, {"VERIDEX_APP_KEY": "", "MODEL_API_KEY": ""}):
             result = self.client.post(f"/v1/cases/{self.case['id']}/review", json={"revision": 1})
         self.assertEqual(result.status_code, 503)
         self.assertNotIn("outcome", result.json)
@@ -69,8 +69,7 @@ class UploadContractTest(unittest.TestCase):
     def test_malformed_model_finding_rejected(self):
         self.case["photos"].append({**self.photo, "role": "after"})
         self.upload()
-        with patch.dict(os.environ, {"MODEL_REVIEW_URL": "https://model.example/review"}), patch("urllib.request.urlopen") as call:
-            call.return_value.__enter__.return_value = io.BytesIO(b'{"outcome":"approved"}')
+        with patch.dict(os.environ, {"VERIDEX_APP_KEY": "registered", "MODEL_API_KEY": "local-test-key"}), patch("server.run_model_review", return_value={"outcome": "approved", "observations": {"evidence": "Region obscured"}, "next_request": "Show the marked area without obstruction"}):
             result = self.client.post(f"/v1/cases/{self.case['id']}/review", json={"revision": 1})
         self.assertEqual(result.status_code, 502)
 
@@ -78,8 +77,8 @@ class UploadContractTest(unittest.TestCase):
         self.case["photos"].append({**self.photo, "role": "after"})
         self.upload()
         expected = {"outcome": "insufficient_evidence", "explanation": "Region obscured", "next_photo": "Show the marked area without obstruction"}
-        with patch.dict(os.environ, {"MODEL_REVIEW_URL": "https://model.example/review"}), patch("urllib.request.urlopen") as call:
-            call.return_value.__enter__.return_value = io.BytesIO(json.dumps(expected).encode())
+        analysis = {"outcome": "insufficient_evidence", "observations": {"evidence": "Region obscured"}, "next_request": "Show the marked area without obstruction"}
+        with patch.dict(os.environ, {"VERIDEX_APP_KEY": "registered", "MODEL_API_KEY": "local-test-key"}), patch("server.run_model_review", return_value=analysis):
             result = self.client.post(f"/v1/cases/{self.case['id']}/review", json={"revision": 1})
         self.assertEqual(result.status_code, 200)
         self.assertEqual(result.json, expected)

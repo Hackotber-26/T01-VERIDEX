@@ -65,7 +65,7 @@ class MainActivity: ComponentActivity() {
                     model.save(photoPath, location, note, region, attachId, photoSource, latitude, longitude, accuracy) { caseId = it; screen = "detail" }
                 }
                 "detail" -> cases.find { it.id == caseId }?.let { item ->
-                    DetailScreen(item, busy, { goBack() }, { capture(item.id) }, { model.upload(item.id) }, { model.review(item.id) }, { model.rename(item.id, it) }, { model.archive(item.id) }, { model.delete(item.id); screen = "cases" }, { model.remind(item.id, it) })
+                    DetailScreen(item, busy, { goBack() }, { capture(item.id) }, { model.upload(item.id) }, { model.review(item.id) }, { model.setReviewConsent(item.id, it) }, { model.rename(item.id, it) }, { model.archive(item.id) }, { model.delete(item.id); screen = "cases" }, { model.remind(item.id, it) })
                 }
                 "demo" -> DemoScreen { goBack() }
             }

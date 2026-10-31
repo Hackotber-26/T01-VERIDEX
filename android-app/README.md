@@ -1,6 +1,6 @@
 # VERIDEX for Android
 
-A native Android Studio prototype for capturing potholes and following their repair evidence. Kotlin, Jetpack Compose, CameraX and WorkManager. Charcoal surfaces, lime accents and a responsive, scrollable interface.
+VERIDEX Android 2.1 captures pothole evidence and follows repair review. Kotlin, Jetpack Compose, CameraX and WorkManager. Charcoal surfaces, lime accents and a responsive, scrollable interface.
 
 ## Open and run
 
@@ -56,8 +56,11 @@ The map is an on-device coordinate plot that does not load third-party tiles. An
 cd backend
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env
 .\.venv\Scripts\python.exe server.py
 ```
+
+Put the registered `VERIDEX_APP_KEY` and model provider `MODEL_API_KEY` in `backend/.env` on this machine. Keep that file private; it is ignored by Git. The shipped `.env.example` contains placeholders only. The key is loaded by the local Python server and is never sent to the Android app or packaged in the APK. The server calls this repository's `veridex.review` pipeline directly, which uses the configured `VERIDEX_MODEL` (default `gemma-4-26b-a4b-it`) and the repository's conservative evidence policy. No separate `MODEL_REVIEW_URL` adapter is needed.
 
 In the app's **Connection** tab:
 
@@ -68,37 +71,17 @@ Only these development loopback hosts allow HTTP in the debug build. Release bui
 
 If port 8080 is already in use, run `server.py --port 8787` and use port 8787 in the app URL and any `adb reverse` command.
 
-The backend saves uploads under `backend/data/<case-id>/`. Duplicate uploads of the same revision are idempotent. A conflicting revision is rejected. Images are validated as normalized JPEGs; each original byte sequence is stored by SHA-256 and every metadata revision is retained. The phone's normalized image is the uploaded evidence; normalization removes EXIF and is not a photo-authentication mechanism.
+Before upload, the user must consent to this exact evidence revision. Consent covers photos, marked areas, notes and captured location being sent through the local backend for model review. New evidence clears consent; withdrawing consent cancels queued work and deletes that case from the backend. The backend independently rejects uploads and reviews without matching current consent. There is no human-label approval or training workflow in this app.
 
-This server binds to localhost and is for development. It has no user accounts or authorization. Do not expose it publicly. Production requires authenticated users, case-level authorization, TLS, rate limiting, retention/deletion policy, and managed storage. Configure a trusted backend URL only.
+The backend saves consented uploads under `backend/data/<case-id>/`. Duplicate uploads of the same revision are idempotent. A conflicting revision is rejected. Images are validated as normalized JPEGs; each original byte sequence is stored by SHA-256 and every metadata revision is retained. The phone's normalized image is the uploaded evidence; normalization removes EXIF and is not a photo-authentication mechanism.
 
-## Connect the actual AI later
+This server binds to localhost and is for development. It has no user accounts or per-client authorization. Do not expose it publicly. Production requires authenticated users, case-level authorization, TLS, rate limiting, retention/deletion policy, and managed storage. Configure a trusted backend URL only.
 
-Your pasted notes contain a pipeline description, not its source code or provider endpoint. The app therefore does not embed or claim to run your existing model.
+## Real app review and offline demo
 
-`backend/server.py` contains an HTTP model adapter. Connect it to a service wrapping your Python pipeline:
+The **real app** uploads a consented case to the local backend, then invokes the existing Gemma review pipeline and AECP policy. Its only valid results are `visible_repair_evidence`, `visible_defect_remains`, or `insufficient_evidence`; model/provider failures do not become positive findings. A human still makes the final decision. `GET /health` reports whether the app registration and model key are ready, and the Connection screen can check that status.
 
-```powershell
-$env:MODEL_REVIEW_URL='https://your-model-service.example/review'
-$env:MODEL_API_KEY='<set locally; never commit>'
-.\.venv\Scripts\python.exe server.py
-```
-
-The server forwards JSON case metadata, image roles, normalized regions, and base64 JPEGs. It sends the server-side key as `Authorization: Bearer ...`. If the existing model provider has a different payload/authentication contract, adapt the **server-side adapter**, not the APK. A raw provider key alone is not an inference endpoint.
-
-Expected response:
-
-```json
-{
-  "outcome": "insufficient_evidence",
-  "explanation": "The marked road area is hidden by an obstruction.",
-  "next_photo": "Photograph the entire marked area without the obstruction from a similar viewpoint."
-}
-```
-
-Valid outcomes: `visible_repair_evidence`, `visible_defect_remains`, `insufficient_evidence`. Explanation is required. Insufficient evidence also requires a targeted `next_photo` request. Review is synchronous in this small prototype (45-second model timeout); migrate to background review jobs for longer inference.
-
-Without an adapter, uploading works and live review returns an explicit **AI not connected** message. The separate demo screen bundles three real, openly licensed road-maintenance photos so it works offline without an API key. Its outcomes are preset examples, never model predictions, and the photos are not paired before/after cases. Photo credits and licenses are in `app/src/main/assets/demo/ATTRIBUTION.md`; the round-one talk track is in `ROUND_ONE_DEMO.md`. Demo examples never enter real case records. No classifier accuracy, severity score, repair certification or government complaint closure is invented.
+The separate demo screen bundles three real, openly licensed road-maintenance photos so it works offline without an API key. Its outcomes are preset examples, never model predictions, and the photos are not paired before/after cases. Photo credits and licenses are in `app/src/main/assets/demo/ATTRIBUTION.md`; the round-one talk track is in `ROUND_ONE_DEMO.md`. Demo examples never enter real case records. No classifier accuracy, severity score, repair certification or government complaint closure is invented.
 
 ![VERIDEX offline round-one demo](screenshots/round-one-demo.png)
 
@@ -106,9 +89,10 @@ Without an adapter, uploading works and live review returns an explicit **AI not
 
 | Method | Path | Behaviour |
 |---|---|---|
-| GET | `/health` | Local server status and whether a model URL is configured |
-| POST | `/v1/cases/sync` | Full case snapshot and base64 photos; acknowledges ID and revision |
-| POST | `/v1/cases/{id}/review` | Body: `{"revision": 1}`; returns structured evidence finding |
+| GET | `/health` | Local app registration, model readiness, consent requirement and model identifier |
+| POST | `/v1/cases/sync` | Full case snapshot and base64 photos; requires consent for the exact revision |
+| POST | `/v1/cases/{id}/review` | Body: `{"revision": 1}`; requires current consent, returns the model finding |
+| DELETE | `/v1/cases/{id}` | Deletes the local backend copy when consent is withdrawn |
 
 Uploads contain `id`, `revision`, `location`, `note`, `created` and `photos[]`. Each photo has `role`, `region: [left, top, right, bottom]`, `time`, and `image_base64`. Coordinates refer to the upright normalized image, range 0–1, and must form a non-empty rectangle.
 
@@ -127,7 +111,7 @@ Manual device checks: camera grant/deny; gallery import; draw/confirm region; sa
 
 ## Limits and next work
 
-- Integrate and evaluate the actual VERIDEX pipeline with labelled real repair pairs.
+- Evaluate the integrated VERIDEX pipeline with labelled real repair pairs; the current key and provider response have not been exercised against live images.
 - Authenticated reviewer workflow and timestamped reviewer decisions.
 - Full localization of explanatory copy, case details and notification text.
 - Room migration as the local dataset grows and additional accessibility review.

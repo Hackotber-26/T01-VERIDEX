@@ -40,15 +40,17 @@ data class RoadCase(
     val id: String = UUID.randomUUID().toString(), val location: String, val note: String = "", val created: Long = System.currentTimeMillis(),
     val photos: List<Evidence>, val sync: String = "local", val error: String = "", val finding: Finding? = null,
     val history: List<String> = listOf("Original evidence saved on this device"), val revision: Int = 1,
-    val title: String = location, val archived: Boolean = false, val reminderAt: Long? = null
+    val title: String = location, val archived: Boolean = false, val reminderAt: Long? = null,
+    val consentRevision: Int? = null, val consentAt: Long? = null
 ) {
     val shortId get() = id.take(6).uppercase(); val latitude get() = photos.firstOrNull()?.latitude; val longitude get() = photos.firstOrNull()?.longitude
+    val hasReviewConsent get() = consentRevision == revision && consentAt != null
     val status get() = when { archived -> "Archived"; finding?.outcome == "insufficient_evidence" -> "New photo needed"; finding != null -> "Awaiting human review"; photos.size > 1 -> "Ready for review"; else -> "Awaiting repair photo" }
-    fun json() = JSONObject().put("id", id).put("location", location).put("note", note).put("created", created).put("photos", JSONArray(photos.map { it.json() })).put("sync", sync).put("error", error).put("finding", finding?.json()).put("history", JSONArray(history)).put("revision", revision).put("title", title).put("archived", archived).put("reminder_at", reminderAt)
+    fun json() = JSONObject().put("id", id).put("location", location).put("note", note).put("created", created).put("photos", JSONArray(photos.map { it.json() })).put("sync", sync).put("error", error).put("finding", finding?.json()).put("history", JSONArray(history)).put("revision", revision).put("title", title).put("archived", archived).put("reminder_at", reminderAt).put("review_consent", hasReviewConsent).put("review_consent_revision", consentRevision.takeIf { hasReviewConsent }).put("review_consent_at", consentAt.takeIf { hasReviewConsent })
     companion object {
         fun parse(j: JSONObject): RoadCase {
             val images = j.getJSONArray("photos"); val history = j.optJSONArray("history") ?: JSONArray(); val location = j.getString("location")
-            return RoadCase(j.getString("id"), location, j.optString("note"), j.getLong("created"), List(images.length()) { Evidence.parse(images.getJSONObject(it)) }, j.optString("sync", "local"), j.optString("error"), j.optJSONObject("finding")?.let { Finding.parse(it, it.optBoolean("demo")) }, List(history.length()) { history.getString(it) }, j.optInt("revision", 1), j.optString("title", location), j.optBoolean("archived"), j.optLong("reminder_at").takeIf { it > 0 })
+            return RoadCase(j.getString("id"), location, j.optString("note"), j.getLong("created"), List(images.length()) { Evidence.parse(images.getJSONObject(it)) }, j.optString("sync", "local"), j.optString("error"), j.optJSONObject("finding")?.let { Finding.parse(it, it.optBoolean("demo")) }, List(history.length()) { history.getString(it) }, j.optInt("revision", 1), j.optString("title", location), j.optBoolean("archived"), j.optLong("reminder_at").takeIf { it > 0 }, j.optInt("review_consent_revision").takeIf { it > 0 }, j.optLong("review_consent_at").takeIf { it > 0 })
         }
     }
 }

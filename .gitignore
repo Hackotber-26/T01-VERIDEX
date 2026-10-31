@@ -13,6 +13,7 @@ dataset/public/*/part-*
 
 .env.*
 !.env.example
+!android-app/backend/.env.example
 .DS_Store
 *.log
 # Android Studio / Gradle

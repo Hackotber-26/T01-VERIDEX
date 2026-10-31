@@ -14,15 +14,18 @@ import java.util.concurrent.TimeUnit
 
 class BackendException(val status: Int, message: String): IOException(message)
 class Backend(private val baseUrl: String) {
-    private fun request(path: String, body: JSONObject): JSONObject {
+    private fun request(path: String, body: JSONObject? = null, method: String = "POST"): JSONObject {
         require(baseUrl.isNotBlank()) { "Add your backend address in Connection first." }
         val connection = URL(baseUrl + path).openConnection() as HttpURLConnection
         try {
             connection.connectTimeout = 15000; connection.readTimeout = 60000
-            connection.requestMethod = "POST"; connection.doOutput = true
+            connection.requestMethod = method
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("Accept", "application/json")
-            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            if (body != null) {
+                connection.doOutput = true
+                connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            }
             val status = connection.responseCode
             val text = (if (status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
             val json = runCatching { JSONObject(text) }.getOrElse { throw IOException("Backend returned an unreadable response ($status)") }
@@ -30,7 +33,10 @@ class Backend(private val baseUrl: String) {
             return json
         } finally { connection.disconnect() }
     }
+    fun health(): JSONObject = request("/health", method = "GET")
+    fun revokeCase(caseId: String) { request("/v1/cases/$caseId", method = "DELETE") }
     fun upload(case: RoadCase) {
+        check(case.hasReviewConsent) { "Consent is required before uploading photos for AI review." }
         val body = case.json()
         val photos = body.getJSONArray("photos")
         case.photos.forEachIndexed { index, photo ->
