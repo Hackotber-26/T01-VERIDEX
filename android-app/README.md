@@ -1,6 +1,6 @@
 # VERIDEX for Android
 
-VERIDEX Android 2.1 captures pothole evidence and follows repair review. Kotlin, Jetpack Compose, CameraX and WorkManager. Charcoal surfaces, lime accents and a responsive, scrollable interface.
+VERIDEX Android 2.1.1 captures pothole evidence and follows repair review. Kotlin, Jetpack Compose, CameraX and WorkManager. Charcoal surfaces, lime accents and a responsive, scrollable interface.
 
 ## Open and run
 

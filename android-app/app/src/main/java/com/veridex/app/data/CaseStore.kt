@@ -25,14 +25,15 @@ data class Evidence(
         .put("sha256", sha256).put("quality", quality.json()).put("latitude", latitude).put("longitude", longitude).put("accuracy_meters", accuracyMeters)
     companion object { fun parse(p: JSONObject) = Evidence(p.getString("path"), p.getString("role"), p.optLong("time", System.currentTimeMillis()), Region.parse(p.getJSONArray("region")), p.optString("source", "camera"), p.optString("sha256"), QualityReport.parse(p.optJSONObject("quality")), p.optDouble("latitude").takeUnless { it.isNaN() }, p.optDouble("longitude").takeUnless { it.isNaN() }, p.optDouble("accuracy_meters").takeUnless { it.isNaN() }?.toFloat()) }
 }
-data class Finding(val outcome: String, val explanation: String, val nextPhoto: String = "", val demo: Boolean = false) {
-    fun json() = JSONObject().put("outcome", outcome).put("explanation", explanation).put("next_photo", nextPhoto).put("demo", demo)
+data class Finding(val outcome: String, val explanation: String, val nextPhoto: String = "", val demo: Boolean = false, val reasonCode: String = "") {
+    val modelUnavailable get() = !demo && (reasonCode == "MODEL_UNAVAILABLE" || explanation.contains("model could not complete this review", true) || explanation.contains("provider request failed", true) || explanation.contains("timed out", true))
+    fun json() = JSONObject().put("outcome", outcome).put("explanation", explanation).put("next_photo", nextPhoto).put("demo", demo).put("reason_code", reasonCode)
     companion object {
         fun parse(j: JSONObject, demo: Boolean = false): Finding {
             val outcome = j.getString("outcome"); require(outcome in setOf("visible_repair_evidence", "visible_defect_remains", "insufficient_evidence")) { "Unknown AI outcome" }
             val explanation = j.getString("explanation"); require(explanation.isNotBlank()) { "Missing review explanation" }
             val next = j.optString("next_photo"); require(outcome != "insufficient_evidence" || next.isNotBlank()) { "Missing recapture instruction" }
-            return Finding(outcome, explanation, next, demo)
+            return Finding(outcome, explanation, next, demo, j.optString("reason_code"))
         }
     }
 }
@@ -45,7 +46,7 @@ data class RoadCase(
 ) {
     val shortId get() = id.take(6).uppercase(); val latitude get() = photos.firstOrNull()?.latitude; val longitude get() = photos.firstOrNull()?.longitude
     val hasReviewConsent get() = consentRevision == revision && consentAt != null
-    val status get() = when { archived -> "Archived"; finding?.outcome == "insufficient_evidence" -> "New photo needed"; finding != null -> "Awaiting human review"; photos.size > 1 -> "Ready for review"; else -> "Awaiting repair photo" }
+    val status get() = when { archived -> "Archived"; finding?.modelUnavailable == true -> "Review unavailable"; finding?.outcome == "insufficient_evidence" -> "New photo needed"; finding != null -> "Awaiting human review"; photos.size > 1 -> "Ready for review"; else -> "Awaiting repair photo" }
     fun json() = JSONObject().put("id", id).put("location", location).put("note", note).put("created", created).put("photos", JSONArray(photos.map { it.json() })).put("sync", sync).put("error", error).put("finding", finding?.json()).put("history", JSONArray(history)).put("revision", revision).put("title", title).put("archived", archived).put("reminder_at", reminderAt).put("review_consent", hasReviewConsent).put("review_consent_revision", consentRevision.takeIf { hasReviewConsent }).put("review_consent_at", consentAt.takeIf { hasReviewConsent })
     companion object {
         fun parse(j: JSONObject): RoadCase {

@@ -190,8 +190,11 @@ def review(case_id):
         result = run_model_review(before_path, after_path, original["region"])
         observations = result.get("observations") or {}
         explanation = observations.get("evidence") if isinstance(observations, dict) else None
+        reasons = result.get("reason_codes") or []
+        reason_code = reasons[0] if reasons else ""
         if not explanation:
-            reasons = result.get("reason_codes") or ["MODEL_UNAVAILABLE"]
+            reasons = reasons or ["MODEL_UNAVAILABLE"]
+            reason_code = reason_code or reasons[0]
             explanation = {
                 "LOW_IMAGE_QUALITY": "One or more photos need a clearer, better-lit capture.",
                 "MODEL_UNAVAILABLE": "The model could not complete this review. No positive finding was produced.",
@@ -203,7 +206,10 @@ def review(case_id):
             provider_error = result.get("provider_error")
             if reasons[0] == "MODEL_UNAVAILABLE" and isinstance(provider_error, str) and provider_error:
                 explanation = f"{provider_error[:180]}. No positive finding was produced."
-        finding = {"outcome": result["outcome"], "explanation": explanation, "next_photo": result.get("next_request") or ""}
+        next_photo = result.get("next_request") or ""
+        if reason_code == "MODEL_UNAVAILABLE":
+            next_photo = "No new photo is needed. Check model access, then retry this review."
+        finding = {"outcome": result["outcome"], "reason_code": reason_code, "explanation": explanation, "next_photo": next_photo}
         if finding["outcome"] not in OUTCOMES or not finding["explanation"].strip() or finding["outcome"] == "insufficient_evidence" and not finding["next_photo"].strip():
             raise ValueError("Review policy returned an invalid finding")
         with lock:

@@ -34,6 +34,12 @@
 - The Connection screen's health check reports configuration only; it does not send images to the provider. The live provider call and findings still require a user-consented photo pair.
 - No human-label approval or model-training workflow is part of this client scope.
 
+## Version 2.1.1 provider-failure clarity
+
+- Provider request failures are labelled as a model-review failure instead of being presented as an image needing a clearer view. The app advises that no new photo is needed and offers a retry.
+- The backend returns only safe provider diagnostics (such as HTTP status or timeout category) and excludes credentials and provider response bodies.
+- `assembleDebug lintDebug` succeeds. The provider was not called during this update; verify the exact key/model error by retrying a consented review with the updated backend.
+
 ## v0.2 checks not yet performed
 
 - Outdoor, physical-device GPS and camera overlay alignment, notification delivery at the scheduled time, voice recognition availability, gallery import from several Android vendors, duplicate-image warning and offline queue retry after process death.

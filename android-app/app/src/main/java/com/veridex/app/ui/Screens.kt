@@ -174,8 +174,8 @@ import java.net.URI
                 }
             }
         }
-        Action(if (case.finding?.outcome == "insufficient_evidence") "Take requested photo" else if (case.photos.size > 1) "Add another repair photo" else "Capture repair photo", Icons.Outlined.PhotoCamera, enabled = !busy && case.photos.size < 12, onClick = capture)
-        if (case.photos.size > 1) OutlinedButton(review, Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = !busy && case.sync == "uploaded" && case.hasReviewConsent, shape = RoundedCornerShape(18.dp)) { if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(18.dp)); Spacer(Modifier.width(10.dp)); Text(if (busy) "Reviewing evidence…" else "Request AI review") }
+        if (case.finding?.modelUnavailable != true) Action(if (case.finding?.outcome == "insufficient_evidence") "Take requested photo" else if (case.photos.size > 1) "Add another repair photo" else "Capture repair photo", Icons.Outlined.PhotoCamera, enabled = !busy && case.photos.size < 12, onClick = capture)
+        if (case.photos.size > 1) OutlinedButton(review, Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = !busy && case.sync == "uploaded" && case.hasReviewConsent, shape = RoundedCornerShape(18.dp)) { if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(18.dp)); Spacer(Modifier.width(10.dp)); Text(if (busy) "Reviewing evidence…" else if (case.finding?.modelUnavailable == true) "Retry AI review" else "Request AI review") }
         Eyebrow("EVIDENCE HISTORY")
         case.photos.forEachIndexed { index, photo ->
             Sheet { Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) { Photo(photo.path, Modifier.size(54.dp)); Column(Modifier.weight(1f)) { Text("${index + 1}. ${photo.role.replaceFirstChar { it.uppercase() }} • ${photo.source}", fontSize = 14.sp); Text(date(photo.time), fontSize = 11.sp, color = Muted); Text("Brightness ${photo.quality.brightness}% • Sharpness ${photo.quality.sharpness}%", fontSize = 10.sp, color = Muted); if (photo.sha256.isNotBlank()) Text("SHA-256 ${photo.sha256.take(14)}…", fontSize = 9.sp, color = Muted) } } }
@@ -191,14 +191,14 @@ import java.net.URI
 @Composable fun FindingCard(finding: Finding) {
     val accent = when (finding.outcome) { "visible_repair_evidence" -> Mint; "visible_defect_remains" -> Lilac; else -> Amber }
     Sheet {
-        Eyebrow(if (finding.demo) "DEMO RESULT · NOT AN AI PREDICTION" else "AI EVIDENCE FINDING", accent)
-        Text(when (finding.outcome) { "visible_repair_evidence" -> "Visible repair evidence"; "visible_defect_remains" -> "The defect is still visible"; else -> "We need a clearer view" }, fontSize = 23.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium)
+        Eyebrow(if (finding.demo) "DEMO RESULT · NOT AN AI PREDICTION" else if (finding.modelUnavailable) "MODEL REVIEW DID NOT COMPLETE" else "AI EVIDENCE FINDING", accent)
+        Text(when { finding.modelUnavailable -> "Review couldn't run"; finding.outcome == "visible_repair_evidence" -> "Visible repair evidence"; finding.outcome == "visible_defect_remains" -> "The defect is still visible"; else -> "We need a clearer view" }, fontSize = 23.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium)
         Body(finding.explanation)
         if (finding.nextPhoto.isNotBlank()) {
             HorizontalDivider(color = Line)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { Icon(Icons.Outlined.CenterFocusStrong, null, tint = accent); Text(finding.nextPhoto, fontSize = 14.sp, lineHeight = 21.sp, color = accent) }
         }
-        Pill("Human review pending", Muted)
+        Pill(if (finding.modelUnavailable) "No new photo needed" else "Human review pending", Muted)
     }
 }
 
@@ -333,6 +333,6 @@ private data class DemoSample(
             Eyebrow("DEVELOPER SETUP", Lilac)
             Body("For the included local backend on an Android emulator, use http://10.0.2.2:8080. On a USB device, use adb reverse tcp:8080 tcp:8080 and http://127.0.0.1:8080.")
         }
-        Body("VERIDEX · Version 2.1\nPhotos stay in private app storage until you consent to upload. Uninstalling removes local cases. AI findings still require human review; this version does not provide a human-label approval workflow.")
+        Body("VERIDEX · Version ${BuildConfig.VERSION_NAME}\nPhotos stay in private app storage until you consent to upload. Uninstalling removes local cases. AI findings still require human review; this version does not provide a human-label approval workflow.")
     }
 }
