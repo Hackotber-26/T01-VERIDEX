@@ -27,3 +27,5 @@ local.properties
 # Local mobile API state and Python environments
 android-app/backend/data/
 android-app/backend/.venv/
+
+.local/
