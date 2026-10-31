@@ -60,7 +60,7 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe server.py
 ```
 
-Put the registered `VERIDEX_APP_KEY` and model provider `MODEL_API_KEY` in `backend/.env` on this machine. Keep that file private; it is ignored by Git. The shipped `.env.example` contains placeholders only. The key is loaded by the local Python server and is never sent to the Android app or packaged in the APK. The server calls this repository's `veridex.review` pipeline directly, which uses the configured `VERIDEX_MODEL` (default `gemma-4-26b-a4b-it`) and the repository's conservative evidence policy. No separate `MODEL_REVIEW_URL` adapter is needed.
+Put the registered `VERIDEX_APP_KEY` and Google provider `GEMINI_API_KEY` in `backend/.env` on this machine. Keep that file private; it is ignored by Git. The shipped `.env.example` contains placeholders only. Register the shared app key with `python -m veridex.api --register-app daksha-app --key-from-env` from the repository root (set VERIDEX_APP_KEY in that terminal first). The keys are loaded by the local Python server and is never sent to the Android app or packaged in the APK. The server calls this repository's `veridex.review` pipeline directly, which uses the configured `VERIDEX_MODEL` (default `gemma-4-26b-a4b-it`) and the repository's conservative evidence policy. No separate `MODEL_REVIEW_URL` adapter is needed.
 
 In the app's **Connection** tab:
 
@@ -71,7 +71,7 @@ Only these development loopback hosts allow HTTP in the debug build. Release bui
 
 If port 8080 is already in use, run `server.py --port 8787` and use port 8787 in the app URL and any `adb reverse` command.
 
-Before upload, the user must consent to this exact evidence revision. Consent covers photos, marked areas, notes and captured location being sent through the local backend for model review. New evidence clears consent; withdrawing consent cancels queued work and deletes that case from the backend. The backend independently rejects uploads and reviews without matching current consent. There is no human-label approval or training workflow in this app.
+Before upload, the user must consent to this exact evidence revision. Consent covers photos, marked areas, notes and captured location being sent through the local backend for model review. New evidence clears consent; withdrawing consent cancels queued work and deletes that case from the backend. The backend independently rejects uploads and reviews without matching current consent. A separate optional training-consent control now allows collection after a successful review. Human labeling and export approval use the operator API, not the mobile app. See ../APP_INTEGRATION.md.
 
 The backend saves consented uploads under `backend/data/<case-id>/`. Duplicate uploads of the same revision are idempotent. A conflicting revision is rejected. Images are validated as normalized JPEGs; each original byte sequence is stored by SHA-256 and every metadata revision is retained. The phone's normalized image is the uploaded evidence; normalization removes EXIF and is not a photo-authentication mechanism.
 

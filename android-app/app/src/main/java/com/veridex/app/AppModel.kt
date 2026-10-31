@@ -43,7 +43,7 @@ class AppModel(application: Application): AndroidViewModel(application) {
                         store.duplicate(sha, existing.id)?.let { duplicate -> error("This image already belongs to case ${duplicate.shortId}.") }
                         val distance = if (latitude != null && longitude != null && existing.latitude != null && existing.longitude != null) distanceMeters(existing.latitude!!, existing.longitude!!, latitude, longitude) else null
                         val additions = buildList { add("New completion evidence saved; review required"); if (distance != null && distance > 250) add("Location warning: capture was ${distance.toInt()} m from the original") }
-                        store.put(existing.copy(photos = existing.photos + Evidence(path, if (existing.photos.size > 1) "recapture" else "after", region = region, source = source, sha256 = sha, quality = report, latitude = latitude, longitude = longitude, accuracyMeters = accuracy), finding = null, sync = "local", error = "", revision = existing.revision + 1, consentRevision = null, consentAt = null, history = existing.history + additions))
+                        store.put(existing.copy(photos = existing.photos + Evidence(path, if (existing.photos.size > 1) "recapture" else "after", region = region, source = source, sha256 = sha, quality = report, latitude = latitude, longitude = longitude, accuracyMeters = accuracy), finding = null, sync = "local", error = "", revision = existing.revision + 1, consentRevision = null, consentAt = null, trainingRevision = null, trainingAt = null, history = existing.history + additions))
                         existing.id
                     } else {
                         val report = PhotoFiles.inspect(java.io.File(path)); val sha = PhotoFiles.fingerprint(java.io.File(path))
@@ -60,7 +60,20 @@ class AppModel(application: Application): AndroidViewModel(application) {
     }
     fun rename(id: String, title: String) { if (title.isNotBlank()) store.update(id) { it.copy(title = title.trim(), history = it.history + "Case renamed") } }
     fun archive(id: String) { store.update(id) { it.copy(archived = !it.archived, history = it.history + if (it.archived) "Case restored" else "Case archived") } }
-    fun delete(id: String) { androidx.work.WorkManager.getInstance(getApplication()).cancelUniqueWork("upload-$id"); androidx.work.WorkManager.getInstance(getApplication()).cancelUniqueWork("reminder-$id"); store.remove(id) }
+    fun delete(id: String) {
+        viewModelScope.launch {
+            busyState.value = true
+            try {
+                withContext(Dispatchers.IO) {
+                    androidx.work.WorkManager.getInstance(getApplication()).cancelUniqueWork("upload-$id").result.get()
+                    androidx.work.WorkManager.getInstance(getApplication()).cancelUniqueWork("reminder-$id")
+                    if (store.baseUrl.isNotBlank()) Backend(store.baseUrl).revokeCase(id)
+                    store.remove(id)
+                }
+            } catch (e: Exception) { notify(e.message ?: "Could not remove backend data. The local case was kept so you can retry.") }
+            finally { busyState.value = false }
+        }
+    }
     fun remind(id: String, days: Int) { store.get(id)?.let { ReminderWorker.schedule(getApplication(), it, days); notify("Follow-up reminder set for $days day(s).") } }
     fun setReviewConsent(id: String, granted: Boolean) {
         val snapshot = store.get(id) ?: return
@@ -87,11 +100,29 @@ class AppModel(application: Application): AndroidViewModel(application) {
                     androidx.work.WorkManager.getInstance(getApplication()).cancelUniqueWork("upload-$id").result.get()
                     if (snapshot.sync != "local" && store.baseUrl.isNotBlank()) Backend(store.baseUrl).revokeCase(id)
                 }
-                store.update(id) { it.copy(consentRevision = null, consentAt = null, sync = "local", error = "", finding = null, history = it.history + "AI review consent withdrawn; backend copy removed") }
+                store.update(id) { it.copy(consentRevision = null, consentAt = null, trainingRevision = null, trainingAt = null, sync = "local", error = "", finding = null, history = it.history + "AI review consent withdrawn; backend copy removed") }
                 notify("Consent withdrawn. The backend copy was removed.")
             } catch (e: Exception) {
                 notify(e.message ?: "Could not withdraw consent. The backend copy may still exist.")
             } finally { busyState.value = false }
+        }
+    }
+    fun setTrainingConsent(id: String, enabled: Boolean) {
+        val snapshot = store.get(id) ?: return
+        if (enabled && !snapshot.hasReviewConsent) { notify("Give review consent first; training permission is optional."); return }
+        viewModelScope.launch {
+            busyState.value = true
+            try {
+                withContext(Dispatchers.IO) {
+                    androidx.work.WorkManager.getInstance(getApplication()).cancelUniqueWork("upload-$id").result.get()
+                    if (snapshot.sync != "local" && store.baseUrl.isNotBlank()) Backend(store.baseUrl).revokeCase(id)
+                }
+                store.update(id) { it.copy(trainingRevision = if (enabled) it.revision else null,
+                    trainingAt = if (enabled) System.currentTimeMillis() else null,
+                    sync = "local", finding = null, error = "",
+                    history = it.history + if (enabled) "Optional training permission granted; upload again" else "Training permission withdrawn; upload again for review only") }
+            } catch (e: Exception) { notify(e.message ?: "Could not change training permission; previous setting remains.") }
+            finally { busyState.value = false }
         }
     }
     fun upload(id: String) {

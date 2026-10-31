@@ -3,6 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 import sqlite3
+import shutil
 import uuid
 from .policy import decide, parse_observation
 from .evaluate import LABELS
@@ -70,6 +71,9 @@ class Store:
             if row is None: raise KeyError('Case not found')
             item=json.loads(row[0]);item.update(training_consent=False,export_approved=False)
             db.execute('UPDATE cases SET payload=? WHERE id=? AND app=?',(json.dumps(item),case_id,app))
+        image_folder = self.root/'images'/case_id
+        if image_folder.exists():
+            shutil.rmtree(image_folder)
         return {'id':case_id,'training_consent':False,'export_approved':False,
                 'note':'Excluded from future exports. Previously uploaded Git history needs separate removal.'}
 

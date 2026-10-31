@@ -26,6 +26,7 @@ class CollectorTests(unittest.TestCase):
             self.assertEqual(len(store.eligible()),1)
             store.withdraw('app-a',case)
             self.assertEqual(store.eligible(),[])
+            self.assertFalse((store.root/'images'/case).exists())
 
     def test_app_finding_schema(self):
         result={'outcome':'insufficient_evidence','observations':None,'next_request':'Show the target.'}

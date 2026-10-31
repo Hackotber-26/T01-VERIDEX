@@ -34,14 +34,29 @@ def load_local_env():
 
 
 load_local_env()
-if os.environ.get("MODEL_API_KEY"):
-    os.environ.setdefault("GEMINI_API_KEY", os.environ["MODEL_API_KEY"])
 sys.path.insert(0, str(REPOSITORY_DIR))
 from veridex.review import review as run_model_review
+from veridex.collector import Store
+from veridex.images import load_image
+from veridex.api import authenticate
+
+def registered_app():
+    path = REPOSITORY_DIR / '.local' / 'clients.json'
+    try:
+        entry = authenticate(json.loads(path.read_text()), 'Bearer ' + os.environ.get('VERIDEX_APP_KEY', ''))
+        if entry and entry['app_id'] == os.environ.get('VERIDEX_APP_NAME', 'daksha-app'):
+            return entry['app_id']
+    except (OSError, ValueError):
+        pass
+    return None
+
+def training_store():
+    return Store(app.config['TRAINING_DIR'])
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 40 * 1024 * 1024
 app.config["DATA_DIR"] = BACKEND_DIR / "data"
+app.config['TRAINING_DIR'] = REPOSITORY_DIR / '.local' / 'collection'
 lock = threading.Lock()
 OUTCOMES = {"visible_repair_evidence", "visible_defect_remains", "insufficient_evidence"}
 
@@ -62,6 +77,12 @@ def validate(payload):
         raise ValueError("Invalid revision")
     if payload.get("review_consent_revision") != revision:
         raise ValueError("Consent must apply to the exact evidence revision being uploaded")
+    training_consent = payload.get('training_consent', False)
+    if type(training_consent) is not bool:
+        raise ValueError('training_consent must be boolean')
+    training_at = payload.get('training_consent_at')
+    if training_consent and (payload.get('training_consent_revision') != revision or type(training_at) is not int or training_at <= 0):
+        raise ValueError('Training permission must apply to the current evidence revision')
     location = payload.get("location")
     if not isinstance(location, str) or not location.strip() or len(location) > 500:
         raise ValueError("A location or landmark is required (max 500 characters)")
@@ -111,7 +132,7 @@ def validate(payload):
         if declared_sha and declared_sha != actual_sha:
             raise ValueError("Photo fingerprint does not match image bytes")
         clean.append({"role": role, "region": region, "time": photo.get("time"), "source": source, "quality": quality, "latitude": latitude, "longitude": longitude, "accuracy_meters": photo.get("accuracy_meters"), "sha256": actual_sha, "bytes": raw})
-    return {"id": case_id, "revision": revision, "location": location.strip(), "note": note, "created": payload.get("created"), "review_consent": True, "review_consent_revision": revision, "review_consent_at": consent_at, "photos": clean}
+    return {"id": case_id, "revision": revision, "location": location.strip(), "note": note, "created": payload.get("created"), "review_consent": True, "review_consent_revision": revision, "review_consent_at": consent_at, 'training_consent': training_consent, 'training_consent_revision': revision if training_consent else None, 'training_consent_at': training_at if training_consent else None, "photos": clean}
 
 
 @app.errorhandler(413)
@@ -121,13 +142,13 @@ def too_large(_):
 
 @app.get("/health")
 def health():
-    app_registered = bool(os.environ.get("VERIDEX_APP_KEY"))
-    model_configured = bool(os.environ.get("MODEL_API_KEY"))
+    app_registered = bool(registered_app())
+    model_configured = bool(os.environ.get("GEMINI_API_KEY"))
     return jsonify(
         status="ok", mode="local-development", app=os.environ.get("VERIDEX_APP_NAME", "daksha-app"),
         app_registered=app_registered, ai_connected=app_registered and model_configured,
         model_configured=model_configured, model=os.environ.get("VERIDEX_MODEL", "gemma-4-26b-a4b-it"),
-        consent_required=True, human_label_approval=False,
+        consent_required=True, human_label_approval=False, training_collection=True, reviewer_approval_external=True,
     )
 
 
@@ -179,15 +200,17 @@ def review(case_id):
         return jsonify(error="Current explicit consent is required before model review"), 403
     if len(case["photos"]) < 2:
         return jsonify(error="A before and an after photo are required"), 400
-    if not os.environ.get("VERIDEX_APP_KEY"):
+    if not registered_app():
         return jsonify(error="This VERIDEX app is not registered on the local backend"), 503
-    if not os.environ.get("MODEL_API_KEY"):
-        return jsonify(error="The model API key is not configured on the local backend"), 503
+    if not os.environ.get("GEMINI_API_KEY"):
+        return jsonify(error="GEMINI_API_KEY is not configured on the local backend; VERIDEX_APP_KEY is a different key"), 503
     original, latest = case["photos"][0], case["photos"][-1]
     before_path = root / (original["sha256"] + ".jpg")
     after_path = root / (latest["sha256"] + ".jpg")
     try:
         result = run_model_review(before_path, after_path, original["region"])
+        if {'MODEL_UNAVAILABLE', 'MODEL_OUTPUT_INVALID'}.intersection(result.get('reason_codes', [])):
+            return jsonify(error='Model service failed; retry later. No evidence finding was issued.'), 502
         observations = result.get("observations") or {}
         explanation = observations.get("evidence") if isinstance(observations, dict) else None
         if not explanation:
@@ -204,6 +227,16 @@ def review(case_id):
             current = json.loads((root / "case.json").read_text())
             if current["revision"] != case["revision"] or current.get("review_consent") is not True:
                 return jsonify(error="Evidence or consent changed during review. Review the current case."), 409
+            finding['training_case_id'] = None
+            if current.get('training_consent') is True and current.get('training_consent_revision') == case['revision']:
+                mapping = root / f"training-{case['revision']}.json"
+                if mapping.exists():
+                    training_id = json.loads(mapping.read_text())['id']
+                else:
+                    training_id = training_store().save(registered_app(), load_image(before_path), load_image(after_path),
+                        original['region'], result, f"app-consent-{case['revision']}-{current['training_consent_at']}", case['id'])
+                    mapping.write_text(json.dumps({'id': training_id, 'app_id': registered_app()}))
+                finding['training_case_id'] = training_id
             (root / f"review-{case['revision']}.json").write_text(json.dumps(finding))
         return jsonify(finding)
     except (ValueError, TimeoutError, OSError):
@@ -217,6 +250,10 @@ def revoke_case(case_id):
     root = Path(app.config["DATA_DIR"]) / case_id
     with lock:
         if root.exists():
+            for mapping in root.glob('training-*.json'):
+                item = json.loads(mapping.read_text())
+                try: training_store().withdraw(item['app_id'], item['id'])
+                except KeyError: pass
             shutil.rmtree(root)
     return jsonify(id=case_id, status="deleted")
 
