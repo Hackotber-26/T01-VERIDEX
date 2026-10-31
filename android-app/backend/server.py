@@ -197,6 +197,12 @@ def review(case_id):
                 "MODEL_UNAVAILABLE": "The model could not complete this review. No positive finding was produced.",
                 "MODEL_OUTPUT_INVALID": "The model response could not be validated. No positive finding was produced.",
             }.get(reasons[0], "The evidence was not sufficient for a positive finding.")
+            # ProviderError strings are intentionally restricted to safe diagnostics
+            # (HTTP status, timeout, or generic transport/schema errors). Never pass
+            # request headers, credentials, or provider response bodies to the client.
+            provider_error = result.get("provider_error")
+            if reasons[0] == "MODEL_UNAVAILABLE" and isinstance(provider_error, str) and provider_error:
+                explanation = f"{provider_error[:180]}. No positive finding was produced."
         finding = {"outcome": result["outcome"], "explanation": explanation, "next_photo": result.get("next_request") or ""}
         if finding["outcome"] not in OUTCOMES or not finding["explanation"].strip() or finding["outcome"] == "insufficient_evidence" and not finding["next_photo"].strip():
             raise ValueError("Review policy returned an invalid finding")
