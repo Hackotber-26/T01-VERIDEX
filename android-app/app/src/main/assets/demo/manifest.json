@@ -1,0 +1,44 @@
+{
+  "dataset_id": "veridex-round-one-offline-demo-v1",
+  "purpose": "Round-one live presentation only",
+  "api_required": false,
+  "ai_inference_used": false,
+  "validated_accuracy_data": false,
+  "paired_before_after_images": false,
+  "samples": [
+    {
+      "id": "work-in-progress",
+      "image": "pothole_repair_work.jpg",
+      "caption": "Pothole repair work in progress",
+      "author": "U.S. Air Force photo by Josh Plueger",
+      "license": "Public domain in the United States (official-duty U.S. federal work)",
+      "source": "https://commons.wikimedia.org/wiki/File:Pothole_repair.jpg",
+      "image_changes": "Bundled 1280 px Commons thumbnail",
+      "preset_outcome": "insufficient_evidence",
+      "preset_explanation": "Repair is underway; no completed surface is shown.",
+      "preset_next_photo": "Capture the finished surface after work is complete from a similar viewpoint."
+    },
+    {
+      "id": "patch-visible",
+      "image": "recently_patched_road.jpg",
+      "caption": "Recently patched potholes along Franklin Farm Road",
+      "author": "Famartin",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:2018-09-03_15_15_33_Recently_patched_potholes_along_Franklin_Farm_Road_in_the_Franklin_Farm_section_of_Oak_Hill,_Fairfax_County,_Virginia.jpg",
+      "image_changes": "Bundled 1280 px Commons thumbnail",
+      "preset_outcome": "visible_repair_evidence",
+      "preset_explanation": "The independent public reference photo is documented as recently patched; it is not matched to an original photo and says nothing about durability."
+    },
+    {
+      "id": "potholes-remain",
+      "image": "potholes_asphalt.jpg",
+      "caption": "Potholes on asphalt road",
+      "author": "Santeri Viinamäki",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Potholes_on_asphalt_road_20171023.jpg",
+      "image_changes": "Bundled 1280 px Commons thumbnail",
+      "preset_outcome": "visible_defect_remains",
+      "preset_explanation": "The public reference photo shows visible road-surface damage; the preset outcome is only a scripted example."
+    }
+  ]
+}

@@ -98,7 +98,9 @@ Expected response:
 
 Valid outcomes: `visible_repair_evidence`, `visible_defect_remains`, `insufficient_evidence`. Explanation is required. Insufficient evidence also requires a targeted `next_photo` request. Review is synchronous in this small prototype (45-second model timeout); migrate to background review jobs for longer inference.
 
-Without an adapter, uploading works and live review returns an explicit **AI not connected** message. Scripted examples appear only in the separate demo screen and never enter real case records. No classifier accuracy, severity score, repair certification or government complaint closure is invented.
+Without an adapter, uploading works and live review returns an explicit **AI not connected** message. The separate demo screen bundles three real, openly licensed road-maintenance photos so it works offline without an API key. Its outcomes are preset examples, never model predictions, and the photos are not paired before/after cases. Photo credits and licenses are in `app/src/main/assets/demo/ATTRIBUTION.md`; the round-one talk track is in `ROUND_ONE_DEMO.md`. Demo examples never enter real case records. No classifier accuracy, severity score, repair certification or government complaint closure is invented.
+
+![VERIDEX offline round-one demo](screenshots/round-one-demo.png)
 
 ## App-facing API
 

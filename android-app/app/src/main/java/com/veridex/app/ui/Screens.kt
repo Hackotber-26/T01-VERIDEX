@@ -1,6 +1,7 @@
 package com.veridex.app.ui
 
 import android.Manifest
+import android.graphics.BitmapFactory
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,7 +19,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.veridex.app.AppModel
@@ -183,23 +187,71 @@ import java.net.URI
 
 @Composable fun DemoScreen(back: () -> Unit) {
     var scenario by rememberSaveable { mutableIntStateOf(0) }
-    val findings = listOf(
-        Finding("insufficient_evidence", "The completion photo is obstructed. The original pothole area cannot be assessed.", "Take a new photo showing the entire marked area without the obstruction, from a similar viewpoint.", true),
-        Finding("visible_repair_evidence", "In this example, the original defect area is visible and appears patched. This does not establish structural repair quality.", demo = true),
-        Finding("visible_defect_remains", "In this example, the pothole remains visible in the marked region of the completion photo.", demo = true)
+    val uriHandler = LocalUriHandler.current
+    val scenarios = listOf(
+        DemoSample(
+            "Work in progress", "pothole_repair_work.jpg", "A crew member works on a road pothole", "Repair work in progress",
+            "U.S. Air Force photo by Josh Plueger · public domain",
+            "https://commons.wikimedia.org/wiki/File:Pothole_repair.jpg",
+            Finding("insufficient_evidence", "This real photo shows pothole repair work underway, not the finished road condition. The scripted demo asks for a completion photo.", "Capture the finished surface after work is complete, from a similar viewpoint.", true)
+        ),
+        DemoSample(
+            "Patch visible", "recently_patched_road.jpg", "Recently patched potholes on a road", "Recently patched potholes",
+            "Famartin · CC BY-SA 4.0",
+            "https://commons.wikimedia.org/wiki/File:2018-09-03_15_15_33_Recently_patched_potholes_along_Franklin_Farm_Road_in_the_Franklin_Farm_section_of_Oak_Hill,_Fairfax_County,_Virginia.jpg",
+            Finding("visible_repair_evidence", "This real reference photo is documented as recently patched. It is not paired with an original photo, and the scripted result does not establish repair durability.", demo = true)
+        ),
+        DemoSample(
+            "Pothole remains", "potholes_asphalt.jpg", "Several potholes in an asphalt road", "Potholes on an asphalt road",
+            "Santeri Viinamäki · CC BY-SA 4.0",
+            "https://commons.wikimedia.org/wiki/File:Potholes_on_asphalt_road_20171023.jpg",
+            Finding("visible_defect_remains", "This real road photo shows visible surface damage. The scripted example illustrates an unresolved-defect response; it is not a model assessment or a matched follow-up case.", demo = true)
+        )
     )
+    val selected = scenarios[scenario.coerceIn(scenarios.indices)]
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
         PageHeader("The evidence loop", back)
         Pill("INTERACTIVE DEMO", Lilac)
         Title("Better questions.\nBetter evidence.")
-        Body("Explore three scripted outcomes. These examples do not analyse your photos or call a model.")
-        RoadArtwork(Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(24.dp)).background(Panel))
+        Body("Three real road photos. Choose an example to see how VERIDEX can explain a next step—all results are scripted for this offline demo.")
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Obstructed", "Visible repair", "Defect remains").forEachIndexed { index, label -> FilterChip(scenario == index, { scenario = index }, label = { Text(label) }) }
+            scenarios.forEachIndexed { index, sample -> FilterChip(scenario == index, { scenario = index }, label = { Text(sample.title) }) }
         }
-        FindingCard(findings[scenario])
+        DemoPhoto(selected.assetName, selected.alt)
+        Eyebrow("REAL PUBLIC PHOTO · SCRIPTED RESULT", Lilac)
+        Text(selected.photoTitle, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Body("Photo: ${selected.credit}")
+        TextButton(onClick = { uriHandler.openUri(selected.sourceUrl) }, contentPadding = PaddingValues(0.dp)) {
+            Text("Open Commons source ↗", fontSize = 12.sp, color = Mint)
+        }
+        FindingCard(selected.finding)
+        Sheet { Eyebrow("DEMO DATA NOTE", Amber); Body("These photos are independent public examples, not before/after pairs. The outcome text is preset and does not come from the VERIDEX model. No API key or network is needed to present this screen.") }
         Sheet { Eyebrow("THE VERIDEX DIFFERENCE", Lilac); Body("When evidence is unclear, ask for a specific missing view instead of forcing a yes/no verdict. Keep the original photo, the follow-up and the reasoning together.") }
         Action("Start a real case", Icons.Outlined.ArrowBack, onClick = back)
+    }
+}
+
+private data class DemoSample(
+    val title: String,
+    val assetName: String,
+    val alt: String,
+    val photoTitle: String,
+    val credit: String,
+    val sourceUrl: String,
+    val finding: Finding
+)
+
+@Composable private fun DemoPhoto(assetName: String, description: String) {
+    val context = LocalContext.current
+    val bitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, assetName) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            context.assets.open("demo/$assetName").use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
+        }
+    }
+    if (bitmap != null) {
+        Image(bitmap!!, description, Modifier.fillMaxWidth().aspectRatio(1.55f).clip(RoundedCornerShape(22.dp)), contentScale = ContentScale.Crop)
+    } else {
+        Box(Modifier.fillMaxWidth().aspectRatio(1.55f).background(Panel, RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) { Text("Sample photo unavailable", color = Muted) }
     }
 }
 
