@@ -113,6 +113,28 @@ class UploadContractTest(unittest.TestCase):
         self.assertEqual(self.client.delete(f"/v1/cases/{self.case['id']}").status_code,200)
         self.assertFalse(store.get('daksha-app',case_id)['training_consent'])
 
+    def test_marking_route_and_stale_revision(self):
+        self.upload()
+        url = f"/v1/cases/{self.case['id']}/analyze"
+        self.assertEqual(self.client.post(url, json={'revision': 2}).status_code, 409)
+        with patch.dict(os.environ, {'GEMINI_API_KEY': 'test'}), patch('server.mark_potholes', return_value={'status': 'suggestions_only', 'potholes': [[.2,.2,.8,.8]], 'human_review_required': True}):
+            response = self.client.post(url, json={'revision': 1})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json['annotated_image_base64'])
+        self.assertEqual(response.json['potholes'], [[.2,.2,.8,.8]])
+
+    def test_related_route_duplicate_and_deletion(self):
+        self.upload()
+        original_id = self.case['id']
+        self.case['id'] = 'abcdef12-1234-1234-1234-123456789abc'
+        self.upload()
+        url = f'/v1/cases/{original_id}/related'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['suggestions'][0]['type'], 'possible_duplicate')
+        self.client.delete(f"/v1/cases/{self.case['id']}")
+        self.assertEqual(self.client.get(url).json['suggestions'], [])
+
     def test_invalid_training_permission_is_rejected(self):
         self.case.update(training_consent=True,training_consent_revision=2,training_consent_at=1770000000000)
         self.assertEqual(self.upload().status_code,400)

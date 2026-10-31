@@ -10,6 +10,7 @@ import re
 import shutil
 import sys
 import threading
+import time
 
 from flask import Flask, jsonify, request
 from PIL import Image, UnidentifiedImageError
@@ -39,6 +40,9 @@ from veridex.review import review as run_model_review
 from veridex.collector import Store
 from veridex.images import load_image
 from veridex.api import authenticate
+from veridex.intake import mark_potholes, annotate, related_reports
+from veridex.images import jpeg
+from veridex.gemma import ProviderError
 
 def registered_app():
     path = REPOSITORY_DIR / '.local' / 'clients.json'
@@ -172,6 +176,8 @@ def sync_case():
                     return jsonify(error="This revision already contains different evidence"), 409
                 return jsonify(id=case["id"], revision=case["revision"], status="uploaded")
         root.mkdir(parents=True, exist_ok=True)
+        if not (root / 'received.json').exists():
+            (root / 'received.json').write_text(json.dumps({'received_at_ms': time.time_ns() // 1000000}))
         for photo in case["photos"]:
             target = root / (photo["sha256"] + ".jpg")
             if not target.exists():
@@ -238,9 +244,75 @@ def review(case_id):
                     mapping.write_text(json.dumps({'id': training_id, 'app_id': registered_app()}))
                 finding['training_case_id'] = training_id
             (root / f"review-{case['revision']}.json").write_text(json.dumps(finding))
+            (root / f"review-time-{case['revision']}.json").write_text(json.dumps({'reviewed_at_ms': time.time_ns() // 1000000}))
         return jsonify(finding)
     except (ValueError, TimeoutError, OSError):
         return jsonify(error="Model review failed or returned an invalid response. Your photos are retained; try again later."), 502
+
+
+@app.post('/v1/cases/<case_id>/analyze')
+def analyze_case(case_id):
+    """Optional single-photo marking; never replaces the user's confirmed ROI."""
+    if not re.fullmatch(r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}', case_id):
+        return jsonify(error='Invalid case ID'), 400
+    root = Path(app.config['DATA_DIR']) / case_id
+    try:
+        with lock:
+            case = json.loads((root / 'case.json').read_text())
+            payload = request.get_json(silent=True)
+            if not isinstance(payload, dict) or payload.get('revision') != case['revision']:
+                return jsonify(error='Current evidence revision required'), 409
+            if case.get('review_consent') is not True:
+                return jsonify(error='Review consent required'), 403
+            photo = case['photos'][0]
+            image = load_image(root / (photo['sha256'] + '.jpg'))
+        if not registered_app() or not os.environ.get('GEMINI_API_KEY'):
+            return jsonify(error='Configure the registered app and GEMINI_API_KEY'), 503
+        result = mark_potholes(image)
+        result['annotated_image_base64'] = base64.b64encode(jpeg(annotate(image, result['potholes']))).decode()
+        with lock:
+            current = json.loads((root / 'case.json').read_text())
+            if current['revision'] != case['revision'] or current.get('review_consent') is not True:
+                return jsonify(error='Evidence changed; analyze current revision'), 409
+        return jsonify(result)
+    except FileNotFoundError:
+        return jsonify(error='Upload this case first'), 404
+    except (ProviderError, ValueError, OSError):
+        return jsonify(error='Marking unavailable; retain manual region selection'), 502
+
+
+@app.get('/v1/cases/<case_id>/related')
+def related_cases(case_id):
+    if not re.fullmatch(r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}', case_id):
+        return jsonify(error='Invalid case ID'), 400
+    base = Path(app.config['DATA_DIR'])
+    def read_case(path):
+        item = json.loads(path.read_text())
+        receipt = path.parent / 'received.json'
+        if receipt.exists():
+            item.update(json.loads(receipt.read_text()))
+        return item
+    def image_loader(item, photo):
+        return load_image(base / item['id'] / (photo['sha256'] + '.jpg'))
+    def finding_loader(item):
+        root = base / item['id']
+        path = root / f"review-{item['revision']}.json"
+        clock = root / f"review-time-{item['revision']}.json"
+        if not path.exists():
+            return {}
+        finding = json.loads(path.read_text())
+        if clock.exists():
+            finding.update(json.loads(clock.read_text()))
+        return finding
+    try:
+        with lock:
+            case = read_case(base / case_id / 'case.json')
+            others = [read_case(path) for path in sorted(base.glob('*/case.json'))]
+            return jsonify(related_reports(case, others, image_loader, finding_loader))
+    except FileNotFoundError:
+        return jsonify(error='Upload this case first'), 404
+    except (ValueError, OSError):
+        return jsonify(error='Could not load related evidence'), 500
 
 
 @app.delete("/v1/cases/<case_id>")
