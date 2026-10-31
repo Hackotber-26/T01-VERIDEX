@@ -18,7 +18,7 @@ class Backend(private val baseUrl: String) {
         require(baseUrl.isNotBlank()) { "Add your backend address in Connection first." }
         val connection = URL(baseUrl + path).openConnection() as HttpURLConnection
         try {
-            connection.connectTimeout = 15000; connection.readTimeout = 60000
+            connection.connectTimeout = 15000; connection.readTimeout = if (path.endsWith("/review")) 420000 else 60000
             connection.requestMethod = method
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("Accept", "application/json")

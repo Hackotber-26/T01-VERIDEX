@@ -10,8 +10,8 @@ android {
         applicationId = "com.veridex.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 22
-        versionName = "2.1.1"
+        versionCode = 23
+        versionName = "2.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }

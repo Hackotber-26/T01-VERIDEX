@@ -130,7 +130,7 @@ import java.net.URI
     }
 }
 
-@Composable fun DetailScreen(case: RoadCase, busy: Boolean, back: () -> Unit, capture: () -> Unit, upload: () -> Unit, review: () -> Unit, consent: (Boolean) -> Unit, rename: (String) -> Unit, archive: () -> Unit, delete: () -> Unit, remind: (Int) -> Unit) {
+@Composable fun DetailScreen(case: RoadCase, busy: Boolean, back: () -> Unit, capture: () -> Unit, upload: () -> Unit, review: () -> Unit, consent: (Boolean) -> Unit, trainingConsent: (Boolean) -> Unit, rename: (String) -> Unit, archive: () -> Unit, delete: () -> Unit, remind: (Int) -> Unit) {
     val context = LocalContext.current
     var renameDialog by remember { mutableStateOf(false) }; var deleteDialog by remember { mutableStateOf(false) }; var reminderMenu by remember { mutableStateOf(false) }; var title by remember(case.title) { mutableStateOf(case.title) }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -163,11 +163,20 @@ import java.net.URI
                     Checkbox(checked = case.hasReviewConsent, onCheckedChange = consent, enabled = !busy)
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text("Consent to AI review", fontWeight = FontWeight.SemiBold)
-                        Body("Send these photos, marked areas, notes and location to the configured model through this local backend. The case is stored there for review. This app does not route photos to human labeling or model training.")
+                        Body("Send these photos, marked areas, notes and location to the configured model through this local backend. The case is stored there for review. Training reuse is a separate optional permission below.")
                         if (case.hasReviewConsent) Text("Consent applies to revision ${case.revision}; new photos require consent again.", fontSize = 11.sp, color = Mint)
                     }
                 }
             } else Body("Add a repair photo before giving consent and sending evidence for AI review.")
+            if (case.hasReviewConsent) {
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Checkbox(checked = case.hasTrainingConsent, onCheckedChange = trainingConsent, enabled = !busy)
+                    Column(Modifier.weight(1f)) {
+                        Text("Optional: help train VERIDEX", fontWeight = FontWeight.SemiBold)
+                        Body("Allow these photos and the AI result to enter a private training collection. A human must label and approve them before private GitHub export. Do not opt in for images containing faces, plates or personal information. Changing this setting clears the backend copy and requires upload again.")
+                    }
+                }
+            }
             if (case.sync !in listOf("queued", "uploading") && case.photos.size > 1 && (case.sync != "uploaded" || !case.hasReviewConsent)) {
                 OutlinedButton(upload, Modifier.fillMaxWidth(), enabled = !busy && case.hasReviewConsent) {
                     Text(if (case.sync == "failed") "Retry consented upload" else if (case.sync == "uploaded") "Upload latest evidence" else "Upload for AI review")
@@ -333,6 +342,6 @@ private data class DemoSample(
             Eyebrow("DEVELOPER SETUP", Lilac)
             Body("For the included local backend on an Android emulator, use http://10.0.2.2:8080. On a USB device, use adb reverse tcp:8080 tcp:8080 and http://127.0.0.1:8080.")
         }
-        Body("VERIDEX · Version ${BuildConfig.VERSION_NAME}\nPhotos stay in private app storage until you consent to upload. Uninstalling removes local cases. AI findings still require human review; this version does not provide a human-label approval workflow.")
+        Body("VERIDEX · Version ${BuildConfig.VERSION_NAME}\nPhotos stay in private app storage until you consent to upload. Uninstalling removes local cases. AI findings still require human review; optional training reuse requires separate consent, and human labels/export approval are handled by the operator API.")
     }
 }

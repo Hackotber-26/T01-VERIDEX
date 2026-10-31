@@ -40,6 +40,12 @@
 - The backend returns only safe provider diagnostics (such as HTTP status or timeout category) and excludes credentials and provider response bodies.
 - `assembleDebug lintDebug` succeeds. The provider was not called during this update; verify the exact key/model error by retrying a consented review with the updated backend.
 
+## Version 2.2.0 PR #1 integration
+
+- PR #1 adds distinct Gemini/app credentials, one-time app-key registration, optional training collection consent, local collection storage, operator labeling, and explicit private-repository export.
+- Review consent remains required for uploads. Training consent is off by default and separately required before a successful review is added to the local training collection.
+- Automated tests use injected/mock model results; live Gemini review remains unverified until a valid Google AI Studio key is supplied privately.
+
 ## v0.2 checks not yet performed
 
 - Outdoor, physical-device GPS and camera overlay alignment, notification delivery at the scheduled time, voice recognition availability, gallery import from several Android vendors, duplicate-image warning and offline queue retry after process death.
