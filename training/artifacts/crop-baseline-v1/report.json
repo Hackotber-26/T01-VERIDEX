@@ -1,0 +1,82 @@
+{
+  "task": "pothole crop versus other labelled defects; NOT repair verification",
+  "model": "HOG + standardized linear SVM trained by SGD",
+  "pothole_source_class_id": 0,
+  "total_images_found": 2009,
+  "usable_crops": 3853,
+  "group_count": 339,
+  "split_crops": {
+    "train": 3466,
+    "validation": 258,
+    "test": 129
+  },
+  "source_class_crop_counts": {
+    "2": 649,
+    "0": 856,
+    "1": 2348
+  },
+  "train_class_counts": {
+    "0": 2742,
+    "1": 724
+  },
+  "test_class_counts": {
+    "0": 106,
+    "1": 23
+  },
+  "skipped": {
+    "tiny_crop": 839,
+    "invalid_annotation": 45
+  },
+  "selected_alpha": 0.01,
+  "validation_balanced_accuracy": 0.5856166492211071,
+  "test_accuracy": 0.7984496124031008,
+  "test_balanced_accuracy": 0.7582034454470878,
+  "dummy_test_accuracy": 0.8217054263565892,
+  "test_confusion_matrix": [
+    [
+      87,
+      19
+    ],
+    [
+      7,
+      16
+    ]
+  ],
+  "classification_report": {
+    "other_annotated_defect": {
+      "precision": 0.925531914893617,
+      "recall": 0.8207547169811321,
+      "f1-score": 0.87,
+      "support": 106.0
+    },
+    "pothole": {
+      "precision": 0.45714285714285713,
+      "recall": 0.6956521739130435,
+      "f1-score": 0.5517241379310345,
+      "support": 23.0
+    },
+    "accuracy": 0.7984496124031008,
+    "macro avg": {
+      "precision": 0.691337386018237,
+      "recall": 0.7582034454470878,
+      "f1-score": 0.7108620689655172,
+      "support": 129.0
+    },
+    "weighted avg": {
+      "precision": 0.8420206875427064,
+      "recall": 0.7984496124031008,
+      "f1-score": 0.8132531408714248,
+      "support": 129.0
+    }
+  },
+  "limitations": [
+    "No repair pairs; no repair-verification accuracy.",
+    "Source-image, exact duplicate, pHash and VLC-date grouping reduce leakage; unrecorded shared sites may remain.",
+    "Other class contains labelled cracks/manholes, not representative arbitrary background.",
+    "One source dataset; no Bengaluru external validation. Not integrated into closure decisions."
+  ],
+  "dummy_test_balanced_accuracy": 0.5,
+  "source_record": "https://zenodo.org/records/17834373",
+  "source_archive_md5": "ef8b402e9f7ee7d2e64919f21ad6ab6a",
+  "status": "experimental; not suitable for deployment or repair certification"
+}

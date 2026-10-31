@@ -1,0 +1,1 @@
+{"id":"site001-case001","location_group":"site001","synthetic":false,"before":"images/site001-before.jpg","after":"images/site001-after.jpg","roi":[0.2,0.3,0.7,0.8],"label":"insufficient_evidence","label_source":"REPLACE: two independent reviewers and adjudicator","consent_or_license":"REPLACE: permission or license reference","observation":null,"next_request":null}

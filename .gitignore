@@ -1,0 +1,17 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+results/
+dataset/images/*
+dataset/labels.jsonl
+dataset/manifest*.jsonl
+dataset/public/*/archive.zip
+dataset/public/*/verified.zip
+dataset/public/*/extracted/
+dataset/public/*/part-*
+
+.env.*
+!.env.example
+.DS_Store
+*.log

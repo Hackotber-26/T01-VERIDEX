@@ -1,0 +1,115 @@
+{
+  "provenance_warning": "Selected historical successes after prompt development; not an unbiased accuracy benchmark.",
+  "real": {
+    "unique_location_groups": 0,
+    "macro_f1_completed": 0.0,
+    "cases": 0,
+    "completed_inferences": 0,
+    "missing": 0,
+    "provider_or_output_failures": 0,
+    "accuracy_completed": null,
+    "accuracy_completed_wilson95": null,
+    "correct_result_rate_all_cases": null,
+    "decision_coverage_completed": null,
+    "false_repair_findings": 0,
+    "repair_findings": 0,
+    "false_discovery_rate_repair": null,
+    "false_approval_rate_all_nonrepair_cases": null,
+    "correct_abstention_rate_all_insufficient_cases": null,
+    "per_class": {
+      "visible_repair_evidence": {
+        "precision": null,
+        "recall": null,
+        "f1": null,
+        "completed_support": 0
+      },
+      "visible_defect_remains": {
+        "precision": null,
+        "recall": null,
+        "f1": null,
+        "completed_support": 0
+      },
+      "insufficient_evidence": {
+        "precision": null,
+        "recall": null,
+        "f1": null,
+        "completed_support": 0
+      }
+    },
+    "confusion_matrix": {
+      "visible_repair_evidence": {
+        "visible_repair_evidence": 0,
+        "visible_defect_remains": 0,
+        "insufficient_evidence": 0
+      },
+      "visible_defect_remains": {
+        "visible_repair_evidence": 0,
+        "visible_defect_remains": 0,
+        "insufficient_evidence": 0
+      },
+      "insufficient_evidence": {
+        "visible_repair_evidence": 0,
+        "visible_defect_remains": 0,
+        "insufficient_evidence": 0
+      }
+    },
+    "mean_latency_seconds": null,
+    "note": "Rates are not independent site-level estimates when cases share a location. Synthetic results do not establish field accuracy. Provider failures are excluded from completed accuracy, included in all-case rates."
+  },
+  "synthetic": {
+    "unique_location_groups": 1,
+    "macro_f1_completed": 1.0,
+    "cases": 3,
+    "completed_inferences": 3,
+    "missing": 0,
+    "provider_or_output_failures": 0,
+    "accuracy_completed": 1.0,
+    "accuracy_completed_wilson95": null,
+    "correct_result_rate_all_cases": 1.0,
+    "decision_coverage_completed": 0.6666666666666666,
+    "false_repair_findings": 0,
+    "repair_findings": 1,
+    "false_discovery_rate_repair": 0.0,
+    "false_approval_rate_all_nonrepair_cases": 0.0,
+    "correct_abstention_rate_all_insufficient_cases": 1.0,
+    "per_class": {
+      "visible_repair_evidence": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "completed_support": 1
+      },
+      "visible_defect_remains": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "completed_support": 1
+      },
+      "insufficient_evidence": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "completed_support": 1
+      }
+    },
+    "confusion_matrix": {
+      "visible_repair_evidence": {
+        "visible_repair_evidence": 1,
+        "visible_defect_remains": 0,
+        "insufficient_evidence": 0
+      },
+      "visible_defect_remains": {
+        "visible_repair_evidence": 0,
+        "visible_defect_remains": 1,
+        "insufficient_evidence": 0
+      },
+      "insufficient_evidence": {
+        "visible_repair_evidence": 0,
+        "visible_defect_remains": 0,
+        "insufficient_evidence": 1
+      }
+    },
+    "mean_latency_seconds": null,
+    "note": "Rates are not independent site-level estimates when cases share a location. Synthetic results do not establish field accuracy. Provider failures are excluded from completed accuracy, included in all-case rates."
+  }
+}

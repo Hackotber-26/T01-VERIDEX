@@ -1,0 +1,26 @@
+{
+  "synthetic": true,
+  "generator": "built-in image generation",
+  "purpose": "workflow demonstration, not real-world validation or a training dataset",
+  "before": "before.png",
+  "after": "after.png",
+  "before_roi": [
+    0.24,
+    0.36,
+    0.8,
+    0.78
+  ],
+  "intended_visual_label": "visible_repair_evidence",
+  "label_status": "generation intent, not independent ground truth",
+  "before_prompt": "Photorealistic synthetic smartphone photo of one fully visible pothole on a quiet Bengaluru-like road, curb and drain landmarks, overcast daylight, no people or text.",
+  "after_prompt": "Edit the same scene, filling only the pothole with dark asphalt; preserve viewpoint, lighting and surrounding landmarks.",
+  "blocked_variant": {
+    "file": "after-blocked.png",
+    "synthetic": true,
+    "intended_outcome": "insufficient_evidence",
+    "expected_reason": "OBSTRUCTED",
+    "generation_method": "built-in image generation edit",
+    "prompt": "Cover original repair area with opaque cardboard; preserve road viewpoint, curb and drain.",
+    "live_test_status": "not_run"
+  }
+}

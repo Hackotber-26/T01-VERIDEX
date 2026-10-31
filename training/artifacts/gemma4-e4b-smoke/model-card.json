@@ -1,0 +1,16 @@
+{
+  "base_model": "unsloth/gemma-4-E4B-it",
+  "training_examples": 3,
+  "training_steps": 10,
+  "synthetic": true,
+  "independent_test_accuracy": null,
+  "scope": "Training smoke adapter only. Not validated for real repair review.",
+  "metrics": {
+    "train_runtime": 86.8265,
+    "train_samples_per_second": 0.115,
+    "train_steps_per_second": 0.115,
+    "total_flos": 358916057673600.0,
+    "train_loss": 3.8957432985305784,
+    "epoch": 3.3333333333333335
+  }
+}

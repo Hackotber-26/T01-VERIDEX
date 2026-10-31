@@ -1,0 +1,138 @@
+{
+  "created": "2025-12-16T22:18:29.248703+00:00",
+  "modified": "2025-12-16T22:18:29.497446+00:00",
+  "id": 17834373,
+  "conceptrecid": "17834372",
+  "doi": "10.5281/zenodo.17834373",
+  "conceptdoi": "10.5281/zenodo.17834372",
+  "doi_url": "https://doi.org/10.5281/zenodo.17834373",
+  "metadata": {
+    "title": "Road Damage Dataset: Potholes, Cracks and Manholes",
+    "doi": "10.5281/zenodo.17834373",
+    "publication_date": "2025-12-05",
+    "description": "<div>\n<div>\n<div>\n<div>\n<p>This dataset provides real-world road surface images collected in urban and rural areas around Rome and Sacrofano (Italy) using two low-cost devices: a GoPro HERO7 mounted on a moving vehicle and a Samsung Galaxy A14 smartphone for stationary captures. All images are 640x360.<br>It aims to support realistic, device-independent road damage detection.</p>\n<p>Each image is annotated in YOLO format with three damage classes:</p>\n<p>Class 0 &ndash; Pothole</p>\n<p>Class 1 &ndash; Crack</p>\n<p>Class 2 &ndash; Manhole</p>\n<p>Unlike most existing datasets that omit or misclassify manholes, this dataset explicitly includes them to improve model robustness and reduce false positives in real-world scenarios.<br>The collection ensures diversity in lighting, perspective, and pavement texture, enabling reliable training and cross-device generalization for AI-based road inspection systems.</p>\n</div>\n</div>\n</div>\n</div>",
+    "access_right": "open",
+    "creators": [
+      {
+        "name": "Giordani, Enrico",
+        "affiliation": "Sapienza University of Rome"
+      },
+      {
+        "name": "Arcioni, Lorenzo",
+        "affiliation": "Sapienza University of Rome",
+        "orcid": "0009-0001-0963-3993"
+      },
+      {
+        "name": "Gil-Mart\u00edn, Manuel",
+        "affiliation": "Universidad Polit\u00e9cnica de Madrid",
+        "orcid": "0000-0002-4285-6224"
+      },
+      {
+        "name": "Marini, Marco Raoul",
+        "affiliation": "Sapienza University of Rome",
+        "orcid": "0000-0002-2540-2570"
+      }
+    ],
+    "dates": [
+      {
+        "type": "available"
+      }
+    ],
+    "version": "0.1.0",
+    "language": "eng",
+    "custom": {
+      "code:codeRepository": "https://github.com/lorenzo-arcioni/Road-Damage-Detection-Dataset",
+      "code:developmentStatus": {
+        "id": "active",
+        "title": {
+          "en": "Active"
+        }
+      }
+    },
+    "resource_type": {
+      "title": "Dataset",
+      "type": "dataset"
+    },
+    "license": {
+      "id": "cc-by-4.0"
+    },
+    "relations": {
+      "version": [
+        {
+          "index": 0,
+          "is_last": false,
+          "parent": {
+            "pid_type": "recid",
+            "pid_value": "17834372"
+          }
+        }
+      ]
+    }
+  },
+  "title": "Road Damage Dataset: Potholes, Cracks and Manholes",
+  "links": {
+    "self": "https://zenodo.org/api/records/17834373",
+    "self_html": "https://zenodo.org/records/17834373",
+    "preview_html": "https://zenodo.org/records/17834373?preview=1",
+    "doi": "https://doi.org/10.5281/zenodo.17834373",
+    "self_doi": "https://doi.org/10.5281/zenodo.17834373",
+    "self_doi_html": "https://zenodo.org/doi/10.5281/zenodo.17834373",
+    "reserve_doi": "https://zenodo.org/api/records/17834373/draft/pids/doi",
+    "parent": "https://zenodo.org/api/records/17834372",
+    "parent_html": "https://zenodo.org/records/17834372",
+    "parent_doi": "https://doi.org/10.5281/zenodo.17834372",
+    "parent_doi_html": "https://zenodo.org/doi/10.5281/zenodo.17834372",
+    "self_iiif_manifest": "https://zenodo.org/api/iiif/record:17834373/manifest",
+    "self_iiif_sequence": "https://zenodo.org/api/iiif/record:17834373/sequence/default",
+    "files": "https://zenodo.org/api/records/17834373/files",
+    "media_files": "https://zenodo.org/api/records/17834373/media-files",
+    "latest": "https://zenodo.org/api/records/17834373/versions/latest",
+    "latest_html": "https://zenodo.org/records/17834373/latest",
+    "versions": "https://zenodo.org/api/records/17834373/versions",
+    "draft": "https://zenodo.org/api/records/17834373/draft",
+    "access_links": "https://zenodo.org/api/records/17834373/access/links",
+    "access_grants": "https://zenodo.org/api/records/17834373/access/grants",
+    "access_users": "https://zenodo.org/api/records/17834373/access/users",
+    "access_request": "https://zenodo.org/api/records/17834373/access/request",
+    "access": "https://zenodo.org/api/records/17834373/access",
+    "communities": "https://zenodo.org/api/records/17834373/communities",
+    "communities-suggestions": "https://zenodo.org/api/records/17834373/communities-suggestions",
+    "request_deletion": "https://zenodo.org/api/records/17834373/request-deletion",
+    "file_modification": "https://zenodo.org/api/records/17834373/file-modification",
+    "quota_increase": "https://zenodo.org/api/records/17834373/quota-increase",
+    "requests": "https://zenodo.org/api/records/17834373/requests"
+  },
+  "updated": "2025-12-16T22:18:29.497446+00:00",
+  "recid": "17834373",
+  "revision": 3,
+  "files": [
+    {
+      "id": "294b6e87-feb0-488b-8bca-bb8a8deb108b",
+      "key": "archive.zip",
+      "size": 193459929,
+      "checksum": "md5:ef8b402e9f7ee7d2e64919f21ad6ab6a",
+      "links": {
+        "self": "https://zenodo.org/api/records/17834373/files/archive.zip/content"
+      }
+    }
+  ],
+  "swh": {},
+  "owners": [
+    {
+      "id": "1475827"
+    }
+  ],
+  "status": "published",
+  "stats": {
+    "downloads": 410,
+    "unique_downloads": 259,
+    "views": 1045,
+    "unique_views": 946,
+    "version_downloads": 305,
+    "version_unique_downloads": 190,
+    "version_unique_views": 703,
+    "version_views": 779
+  },
+  "state": "done",
+  "submitted": true
+}
